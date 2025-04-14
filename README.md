@@ -51,3 +51,20 @@ pip install -r requirements.txt
 
 # Run application
 python download.py
+
+
+Advanced Features ⚙️
+- **Clipboard Monitoring: Runs in background**:
+- **Tray Icon Control: Right-click for options**:
+- **Auto-Clean Filenames: Removes special characters**:
+- **Error Logging: Detailed error reports**:
+- **Proxy Support: Add proxies in config**:
+
+Developer Notes 👨💻
+# Ethical Use Reminder
+print("Please respect content creators' rights and only download")
+print("videos you have permission to access. Use responsibly!")
+
+License 📄
+This project is licensed under the MIT License - see LICENSE file for details
+Developed with ❤️ by Md Yamin Hossain
