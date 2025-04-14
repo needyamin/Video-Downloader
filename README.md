@@ -5,7 +5,8 @@
 
 A cross-platform desktop application for downloading high-quality videos and audio from **1000+ platforms** including YouTube, Facebook, Instagram, TikTok, Twitter, and more. Features automatic clipboard monitoring, system tray integration, and smart filename handling.
 
-![App Screenshot](./screenshot.png) <!-- Replace with actual screenshot file -->
+## App Screenshot
+![Image](https://github.com/user-attachments/assets/528fa1ca-f9b9-4215-ae96-14b58b9acdba)
 
 ## Features ✨
 
