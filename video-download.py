@@ -16,12 +16,14 @@ from urllib.parse import urlparse
 import validators
 import yt_dlp.postprocessor.ffmpeg
 import queue
+import shutil
+import win32com.client  # Requires: pip install pywin32
 
 # Create a queue for thread-safe UI updates
 ui_queue = queue.Queue()
 
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
+    """Get absolute path to resource, works for dev and for PyInstaller."""
     try:
         base_path = sys._MEIPASS
     except AttributeError:
@@ -62,7 +64,7 @@ tray_icon = None
 
 root = tk.Tk()
 root.title("Universal Video Downloader")
-root.geometry("640x540")  # Increased height for playlist options
+root.geometry("640x600")  # Increased height for playlist options
 root.resizable(False, False)
 
 if ICON_PATH.exists():
@@ -105,9 +107,19 @@ max_files_entry = tk.Entry(max_files_frame, width=5, state=tk.DISABLED)
 max_files_entry.pack(side=tk.LEFT)
 max_files_entry.insert(0, "100")
 
-btn_frame = tk.Frame(root)
-btn_frame.pack(pady=10)
+# (Optional) Auto-start checkbox is left in the UI if you wish to toggle later.
+auto_start_var = BooleanVar(value=True)
+auto_start_checkbox = tk.Checkbutton(root, text="Run on Windows Startup", variable=auto_start_var)
+auto_start_checkbox.pack(pady=5)
+# In this version, auto-start is called automatically on launch.
+def on_auto_start_check():
+    if auto_start_var.get():
+        enable_auto_start()
+    else:
+        disable_auto_start()
+auto_start_checkbox.config(command=on_auto_start_check)
 
+# Text output display
 tk.Label(root, text="Output:").pack()
 output_box = tk.Text(root, height=8, width=70, state='disabled', bg="#f0f0f0")
 output_box.pack(pady=5)
@@ -251,62 +263,54 @@ def download_media(is_audio):
         ui_queue.put(lambda: enable_buttons())
 
 # Buttons
+btn_frame = tk.Frame(root)
+btn_frame.pack(pady=10)
 video_btn = tk.Button(btn_frame, text="Download Video (MP4)", command=lambda: threaded_download(False), width=25)
 video_btn.grid(row=0, column=0, padx=10)
 audio_btn = tk.Button(btn_frame, text="Download Audio (MP3)", command=lambda: threaded_download(True), width=25)
 audio_btn.grid(row=0, column=1, padx=10)
 
-# Footer
-def open_link(event):
-    webbrowser.open("https://needyamin.github.io")
-footer_label = tk.Label(root, text="Developed by ", font=('Arial', 10))
-footer_label.pack(pady=(20, 5))
-clickable_link = tk.Label(root, text="Md Yamin Hossain", fg="blue", cursor="hand2", font=('Arial', 10, 'bold'))
-clickable_link.pack()
-clickable_link.bind("<Button-1>", open_link)
-
-# Clipboard Monitoring
-def check_clipboard():
-    global last_copied_url
+# Auto-Start Functions
+def enable_auto_start():
     try:
-        clipboard_content = pyperclip.paste().strip()
-        if validators.url(clipboard_content):
-            if clipboard_content != last_copied_url and is_supported_url(clipboard_content):
-                url_entry.delete(0, tk.END)
-                url_entry.insert(0, clipboard_content)
-                last_copied_url = clipboard_content
-                log(f"?? Auto-detected URL: {clipboard_content}")
+        # Create a folder in C:\YAMiN to store the app
+        yamin_dir = Path("C:/YAMiN")
+        yamin_dir.mkdir(parents=True, exist_ok=True)
+
+        # Determine source: use the executable if frozen, otherwise the script file.
+        if getattr(sys, 'frozen', False):
+            source_path = Path(sys.executable)
+        else:
+            source_path = Path(__file__)
+
+        dest_path = yamin_dir / source_path.name
+        if not dest_path.exists():
+            shutil.copy(source_path, dest_path)
+
+        # Create shortcut in the Startup folder
+        startup_dir = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+        shortcut_path = startup_dir / "YaminDownloader.lnk"
+
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortcut(str(shortcut_path))
+        shortcut.TargetPath = str(dest_path)
+        shortcut.WorkingDirectory = str(yamin_dir)
+        shortcut.IconLocation = str(ICON_PATH) if ICON_PATH.exists() else str(dest_path)
+        shortcut.save()
+
+        log("Auto-start has been enabled. App will run on Windows startup.")
     except Exception as e:
-        print("Clipboard error:", e)
-    root.after(1000, check_clipboard)
+        messagebox.showerror("Error", f"Failed to set auto-start:\n{e}")
 
-check_clipboard()
-
-
-# Add this function BEFORE the clipboard monitoring code
-def is_supported_url(url):
+def disable_auto_start():
     try:
-        domain = urlparse(url).netloc.lower()
-        return any(sd in domain for sd in SUPPORTED_DOMAINS)
-    except:
-        return False
-
-# Then keep the clipboard monitoring code as is:
-def check_clipboard():
-    global last_copied_url
-    try:
-        clipboard_content = pyperclip.paste().strip()
-        if validators.url(clipboard_content):
-            if clipboard_content != last_copied_url and is_supported_url(clipboard_content):
-                url_entry.delete(0, tk.END)
-                url_entry.insert(0, clipboard_content)
-                last_copied_url = clipboard_content
-                log(f"?? Auto-detected URL: {clipboard_content}")
+        startup_dir = Path(os.environ["APPDATA"]) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup"
+        shortcut_path = startup_dir / "YaminDownloader.lnk"
+        if shortcut_path.exists():
+            shortcut_path.unlink()
+        log("Auto-run has been disabled.")
     except Exception as e:
-        print("Clipboard error:", e)
-    root.after(1000, check_clipboard)
-
-
+        messagebox.showerror("Error", f"Failed to disable auto-start:\n{e}")
 
 # Tray Icon functions
 def on_open(icon, item):
@@ -338,8 +342,44 @@ def hide_to_tray():
 
 root.protocol("WM_DELETE_WINDOW", hide_to_tray)
 
+# Footer
+def open_link(event):
+    webbrowser.open("https://needyamin.github.io")
+footer_label = tk.Label(root, text="Developed by ", font=('Arial', 10))
+footer_label.pack(pady=(20, 5))
+clickable_link = tk.Label(root, text="Md Yamin Hossain", fg="blue", cursor="hand2", font=('Arial', 10, 'bold'))
+clickable_link.pack()
+clickable_link.bind("<Button-1>", open_link)
+
+# Clipboard Monitoring Functions
+def is_supported_url(url):
+    try:
+        domain = urlparse(url).netloc.lower()
+        return any(sd in domain for sd in SUPPORTED_DOMAINS)
+    except:
+        return False
+
+def check_clipboard():
+    global last_copied_url
+    try:
+        clipboard_content = pyperclip.paste().strip()
+        if validators.url(clipboard_content):
+            if clipboard_content != last_copied_url and is_supported_url(clipboard_content):
+                url_entry.delete(0, tk.END)
+                url_entry.insert(0, clipboard_content)
+                last_copied_url = clipboard_content
+                log(f"Auto-detected URL: {clipboard_content}")
+    except Exception as e:
+        print("Clipboard error:", e)
+    root.after(1000, check_clipboard)
+
+check_clipboard()
+
 # Start queue processing
 root.after(100, process_queue)
+
+# Automatically enable auto-start when the application is executed.
+enable_auto_start()
 
 # Main loop
 if __name__ == "__main__":

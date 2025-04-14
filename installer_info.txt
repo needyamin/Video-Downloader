@@ -2,4 +2,4 @@ download add add root folder: ffmpeg.exe
 
 then,
 
-pyinstaller --noconsole --onefile --icon=needyamin.ico --add-data "ffmpeg.exe;." --add-data "needyamin.ico;." download.py
+pyinstaller --noconsole --onefile --icon=needyamin.ico --add-data "ffmpeg.exe;." --add-data "needyamin.ico;." video-download.py
