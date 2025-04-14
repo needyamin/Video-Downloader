@@ -22,14 +22,24 @@ ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('needyamin.video_d
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ICON_PATH = Path(APP_DIR) / "needyamin.ico"
 
-# Output directories
-base_output_dir = Path(os.path.join(APP_DIR, "downloads"))
-video_output_dir = base_output_dir / "video"
-audio_output_dir = base_output_dir / "audio"
 
-# Create output directories
+# Get user Downloads folder
+downloads_path = Path(os.environ["USERPROFILE"]) / "Downloads" / "Yamin Downloader"
+# Output directories
+video_output_dir = downloads_path / "video"
+audio_output_dir = downloads_path / "audio"
 video_output_dir.mkdir(parents=True, exist_ok=True)
 audio_output_dir.mkdir(parents=True, exist_ok=True)
+
+
+# Output directories
+#base_output_dir = Path(os.path.join(APP_DIR, "downloads"))
+# video_output_dir = base_output_dir / "video"
+# audio_output_dir = base_output_dir / "audio"
+
+# Create output directories
+# video_output_dir.mkdir(parents=True, exist_ok=True)
+# audio_output_dir.mkdir(parents=True, exist_ok=True)
 
 # Supported platforms and URL patterns
 SUPPORTED_DOMAINS = {
@@ -40,6 +50,9 @@ SUPPORTED_DOMAINS = {
 
 # Global variable for clipboard monitoring
 last_copied_url = ""
+
+# Global variable for tray icon
+tray_icon = None
 
 # Initialize main window
 root = tk.Tk()
@@ -209,7 +222,6 @@ def check_clipboard():
     global last_copied_url
     try:
         clipboard_content = pyperclip.paste().strip()
-        
         if validators.url(clipboard_content):
             if clipboard_content != last_copied_url and is_supported_url(clipboard_content):
                 url_entry.delete(0, tk.END)
@@ -218,31 +230,43 @@ def check_clipboard():
                 log(f"?? Auto-detected URL: {clipboard_content}")
     except Exception as e:
         print("Clipboard error:", e)
-    
     root.after(1000, check_clipboard)
 
 check_clipboard()
 
-# System Tray
-tray_icon = None
+# System Tray functions
+def on_open(icon, item):
+    global tray_icon
+    # Stop the tray icon and bring back the main window
+    if tray_icon:
+        tray_icon.stop()
+        tray_icon = None
+    root.deiconify()
+
+def on_quit(icon, item):
+    # Stop the tray icon and exit the application
+    if tray_icon:
+        tray_icon.stop()
+    root.destroy()
 
 def create_tray_icon():
     try:
         image = Image.open(str(ICON_PATH)).resize((64, 64), Image.Resampling.LANCZOS)
     except Exception:
         image = Image.new("RGB", (64, 64), "black")
-    
     menu = (
-        item("Open", lambda: root.deiconify()),
-        item("Quit", root.destroy)
+        item("Open", on_open),
+        item("Quit", on_quit)
     )
     return pystray.Icon("VideoDownloader", image, "Video Downloader", menu)
 
 def hide_to_tray():
-    root.withdraw()
     global tray_icon
-    tray_icon = create_tray_icon()
-    threading.Thread(target=tray_icon.run, daemon=True).start()
+    root.withdraw()
+    # Only create a tray icon if one doesn't exist already.
+    if tray_icon is None:
+        tray_icon = create_tray_icon()
+        threading.Thread(target=tray_icon.run, daemon=True).start()
 
 root.protocol("WM_DELETE_WINDOW", hide_to_tray)
 

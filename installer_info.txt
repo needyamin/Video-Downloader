@@ -1,0 +1,1 @@
+pyinstaller --noconsole --onefile --icon=needyamin.ico --add-data "needyamin.ico;." download.py
