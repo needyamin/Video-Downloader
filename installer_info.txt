@@ -1,1 +1,5 @@
-pyinstaller --noconsole --onefile --icon=needyamin.ico --add-data "needyamin.ico;." download.py
+download add add root folder: ffmpeg.exe
+
+then,
+
+pyinstaller --noconsole --onefile --icon=needyamin.ico --add-data "ffmpeg.exe;." --add-data "needyamin.ico;." download.py
