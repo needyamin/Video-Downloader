@@ -8,6 +8,12 @@ A cross-platform desktop application for downloading high-quality videos and aud
 ## App Screenshot
 ![Image](https://github.com/user-attachments/assets/528fa1ca-f9b9-4215-ae96-14b58b9acdba)
 
+## Uses 
+
+- Single file executable build using PyInstaller. Install it First.
+- The download link is automatically pasted into the software when you copy it from YouTube, Facebook, TikTok, etc.
+- All Downloads file save in your `Download >> Yamin Downloader` Folder
+
 ## Features ✨
 
 - **Multi-Platform Support**: Download from YouTube, Facebook, Instagram, TikTok, Twitter, Twitch, Dailymotion, etc.
